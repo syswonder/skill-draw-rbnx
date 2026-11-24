@@ -20,7 +20,7 @@ Homing and global motion parameters are exposed by the plotter primitive
 (``robonix/primitive/plotter/{home,set_params}``), not by this skill: an
 LLM/user changes them directly, so drawing never overwrites them.
 
-Text writing lives in the separate ``skill-text-rbnx`` package. This
+Text writing lives in the separate ``skill-write_text-rbnx`` package. This
 skill never executes model-written Python: preview rendering is a fixed
 JSON-scene renderer, drawing is either a fixed vector conversion
 (``draw_scene``) or a fixed raster-tracing pipeline (``draw_image``).

@@ -14,7 +14,7 @@ build: bash scripts/build.sh
 start: bash scripts/start.sh
 
 # Package-local contracts: this skill owns preview/draw/list.
-# Text writing moved to skill-text-rbnx (robonix/skill/text/*).
+# Text writing moved to skill-write_text-rbnx (robonix/skill/text/*).
 # The primitive contracts mirrored under capabilities/primitive/ are
 # consumed but NOT listed here — they exist only so rbnx codegen emits
 # the gRPC stubs this skill calls.

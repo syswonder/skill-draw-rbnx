@@ -6,7 +6,7 @@
 # config as documented in each .srv.
 #
 # Everything is millimetres, matching the SDK and the PLC. Text writing lives
-# in a separate package (skill-text-rbnx) and has its own config.
+# in a separate package (skill-write_text-rbnx) and has its own config.
 
 config:
   # Workspace geometry (drawable area + pen heights) is authoritative in the

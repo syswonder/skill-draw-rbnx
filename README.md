@@ -10,7 +10,7 @@ Catalog name: `robonix.skill.draw`.
 The skill never talks TCP or PLC. It resolves the plotter primitive through
 Atlas and reuses the repository [`SDK/`](../../../SDK) for image geometry;
 `skeleton` and `lineart` tracing live in [`xyz_draw/trace.py`](xyz_draw/trace.py).
-Text writing lives in [`skill-text-rbnx`](../skill-text-rbnx).
+Text writing lives in [`skill-write_text-rbnx`](../skill-write_text-rbnx).
 
 ## Capability surface
 
@@ -381,7 +381,7 @@ Suggested checks, in order:
 ## Known limits
 
 - Scenes are line art only: no fills, colours, gradients, or text. Use
-  `skill-text-rbnx` for text.
+  `skill-write_text-rbnx` for text.
 - `draw_scene` ignores `width_mm` for plotting; the physical pen defines the
   stroke width.
 - `outline` traces the ink boundary, so line art becomes two parallel sides.

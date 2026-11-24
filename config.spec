@@ -6,20 +6,13 @@
 # config as documented in each .srv.
 #
 # Everything is millimetres, matching the SDK and the PLC. Text writing lives
-# in a separate package (skill-hdu-text-rbnx) and has its own config.
+# in a separate package (skill-text-rbnx) and has its own config.
 
 config:
-  # Workspace in machine millimetres (paper frame).
-  # Machine zero (0,0,0) is 50 mm above the paper's lower-left corner, so
-  # the paper surface and pen-down height are z = -50.
-  workspace:
-    x_min: 0.0
-    x_max: 180.0
-    y_min: 0.0
-    y_max: 150.0
-    # Pen heights. Must satisfy -50 <= z_down < z_up <= 0.
-    z_up: -46.0
-    z_down: -50.0
+  # Workspace geometry (drawable area + pen heights) is authoritative in the
+  # plotter primitive and is read from its `geometry` contract on activation.
+  # It is NOT configured here; a `workspace:` mapping in config is only a
+  # fallback used when that contract is unreachable (the skill logs an error).
 
   # ── motion profile ─────────────────────────────────────────────────
   # Speed, acceleration, deceleration, and jerk are NOT skill config:
@@ -151,10 +144,11 @@ config:
   # ── preview renderer defaults ──────────────────────────────────────
   # Used by render_preview (debug=true) and by draw_scene when parsing a
   # scene (scene size limits and the default canvas).
-  # Default canvas when the JSON scene omits width_mm/height_mm. Must fit
-  # inside the workspace; 0 means "use the workspace width/height".
-  generate_default_width_mm: 180.0
-  generate_default_height_mm: 150.0
+  # Default canvas when the JSON scene omits width_mm/height_mm. 0 means
+  # "use the drawable area reported by the plotter primitive". Any positive
+  # value must fit inside the primitive's drawable area.
+  generate_default_width_mm: 0.0
+  generate_default_height_mm: 0.0
 
   # float mm per pixel, default: 0.25 (4 px/mm). 180 x 150 mm -> 720 x
   # 600 px. Smaller values give smoother outlines at the cost of PNG size.

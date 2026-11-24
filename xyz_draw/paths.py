@@ -43,7 +43,7 @@ def _workspace_base() -> Path:
         return Path(raw).expanduser()
     # rbnx launches start.sh with cwd = package directory. Anchor relative
     # paths at the deployment root so "images" means <repo>/images, not
-    # <repo>/packages/skills/skill-hdu-draw-rbnx/images.
+    # <repo>/packages/skills/skill-draw-rbnx/images.
     return Path(__file__).resolve().parents[4]
 
 

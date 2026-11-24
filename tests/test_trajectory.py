@@ -7,7 +7,7 @@ import math
 
 import numpy as np
 
-from xyz_draw.sdk_path import trajectory_module
+from xyz_draw.geometry import trajectory as trajectory_module
 
 
 def test_open_contour_stops_at_its_end_instead_of_drawing_a_chord():
@@ -18,7 +18,7 @@ def test_open_contour_stops_at_its_end_instead_of_drawing_a_chord():
     across the whole image. No two consecutive pen-down points should now
     be farther apart than one marching-squares step.
     """
-    trajectory = trajectory_module()
+    trajectory = trajectory_module
     binary = np.zeros((12, 12), dtype=bool)
     binary[5, :] = True
 
@@ -37,7 +37,7 @@ def test_open_contour_stops_at_its_end_instead_of_drawing_a_chord():
 
 
 def test_ordering_can_enter_a_contour_from_its_far_end():
-    trajectory = trajectory_module()
+    trajectory = trajectory_module
     first = [(0.0, 0.0), (10.0, 0.0)]
     closer_at_end = [(30.0, 0.0), (11.0, 0.0)]
 

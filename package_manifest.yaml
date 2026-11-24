@@ -1,7 +1,7 @@
 manifestVersion: 1
 
 package:
-  name: robonix.skill.hdu.draw
+  name: robonix.skill.draw
   version: 0.1.0
   description: XYZ 三轴写字机绘图技能 — 声明式场景直绘、提示词生图、debug 预览、指定目录读图与多模式轮廓绘制。
   tags: [skill, plot, draw, image, imagegen, preview, scene, skeleton, xyz]
@@ -14,7 +14,7 @@ build: bash scripts/build.sh
 start: bash scripts/start.sh
 
 # Package-local contracts: this skill owns preview/draw/list.
-# Text writing moved to skill-hdu-text-rbnx (robonix/skill/text/*).
+# Text writing moved to skill-text-rbnx (robonix/skill/text/*).
 # The primitive contracts mirrored under capabilities/primitive/ are
 # consumed but NOT listed here — they exist only so rbnx codegen emits
 # the gRPC stubs this skill calls.

@@ -38,10 +38,12 @@ class GenerateError(ValueError):
 class GenerateOptions:
     """Limits and defaults for one generated image."""
 
-    default_width_mm: float = 180.0
-    default_height_mm: float = 150.0
-    max_width_mm: float = 180.0
-    max_height_mm: float = 150.0
+    # Canvas size and limits are supplied by the caller from the primitive's
+    # drawable area; there are no machine-specific defaults here.
+    default_width_mm: float
+    default_height_mm: float
+    max_width_mm: float
+    max_height_mm: float
     #: Millimetres per pixel, matching the SDK and Robonix metadata.
     pixel_to_mm: float = 0.25
     line_width_mm: float = 0.5

@@ -1,16 +1,16 @@
-# skill-hdu-draw-rbnx
+# skill-draw-rbnx
 
 Robonix **skill** for declarative scene drawing, prompt-to-image drawing,
 debug previews, and traced image drawing. It owns
 `robonix/skill/plot/*` and turns JSON scenes, generated PNGs, or existing
 images into pen-up/down waypoints for the plotter primitive.
 
-Catalog name: `robonix.skill.xyz.draw`.
+Catalog name: `robonix.skill.draw`.
 
 The skill never talks TCP or PLC. It resolves the plotter primitive through
 Atlas and reuses the repository [`SDK/`](../../../SDK) for image geometry;
 `skeleton` and `lineart` tracing live in [`xyz_draw/trace.py`](xyz_draw/trace.py).
-Text writing lives in [`skill-hdu-text-rbnx`](../skill-hdu-text-rbnx).
+Text writing lives in [`skill-text-rbnx`](../skill-text-rbnx).
 
 ## Capability surface
 
@@ -251,8 +251,7 @@ if they are missing it returns `Deferred` and retries on the next MCP call.
 
 ## Driver-init lifecycle
 
-`scripts/start.sh` exports `ROBONIX_XYZ_SDK` and execs
-`python3 -m xyz_draw.main`.
+`scripts/start.sh` execs `python3 -m xyz_draw.main`.
 
 1. `CMD_INIT`: parse and validate config, image roots, and preview settings;
    no primitive connection.
@@ -262,7 +261,7 @@ if they are missing it returns `Deferred` and retries on the next MCP call.
 ## Layout
 
 ```text
-skill-hdu-draw-rbnx/
+skill-draw-rbnx/
 ├── package_manifest.yaml
 ├── capabilities/
 │   ├── driver.v1.toml
@@ -285,7 +284,7 @@ skill-hdu-draw-rbnx/
 │   ├── paths.py                        # image roots and preview naming
 │   ├── plan.py                         # workspace validation and bounds
 │   ├── primitive_client.py             # Atlas discovery + gRPC calls
-│   └── sdk_path.py                     # locates the repository SDK
+│   └── geometry/                       # vendored image + trajectory (image, trajectory)
 ├── scripts/{build,start}.sh
 ├── tests/                              # pure-unit tests, no runtime needed
 ├── config.spec
@@ -304,13 +303,9 @@ Deployment config lives in the `xyz_draw` skill `config` block of
 constraints are in [`config.spec`](config.spec).
 
 ```yaml
-workspace:
-  x_min: 0.0
-  x_max: 180.0
-  y_min: 0.0
-  y_max: 150.0
-  z_up: -46.0
-  z_down: -50.0
+# Drawable area and pen heights are NOT configured here. They are read
+# from the primitive's `geometry` contract on activation, so this skill
+# carries no machine-specific numbers and works on any sized rig.
 image_dir: images          # read root (deployment-root relative)
 output_dir: ""             # empty -> same as image_dir; the only write root
 debug: true                # checked-in deployment value; config.spec default false
@@ -386,7 +381,7 @@ Suggested checks, in order:
 ## Known limits
 
 - Scenes are line art only: no fills, colours, gradients, or text. Use
-  `skill-hdu-text-rbnx` for text.
+  `skill-text-rbnx` for text.
 - `draw_scene` ignores `width_mm` for plotting; the physical pen defines the
   stroke width.
 - `outline` traces the ink boundary, so line art becomes two parallel sides.

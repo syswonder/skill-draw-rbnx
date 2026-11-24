@@ -152,8 +152,7 @@ homing after a successful job. Neither changes the profile.
 ## Coordinates
 
 - Units: millimetres; paper origin at the lower-left, +X right, +Y up.
-- Work area: 180 mm × 150 mm.
-- Machine zero `(0, 0, 0)` is 50 mm above the paper; paper surface `z = -50`,
-  pen-up `z = -46`.
+- Drawable area and pen heights are reported by the `geometry` contract on
+  activation; this skill hardcodes none of them.
 - The skill validates every waypoint against the workspace before moving; an
   out-of-bounds plan returns `success=false` with no motion.

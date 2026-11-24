@@ -20,20 +20,23 @@ Homing and global motion parameters are exposed by the plotter primitive
 (``robonix/primitive/plotter/{home,set_params}``), not by this skill: an
 LLM/user changes them directly, so drawing never overwrites them.
 
-Text writing lives in the separate ``skill-hdu-text-rbnx`` package. This
+Text writing lives in the separate ``skill-text-rbnx`` package. This
 skill never executes model-written Python: preview rendering is a fixed
 JSON-scene renderer, drawing is either a fixed vector conversion
 (``draw_scene``) or a fixed raster-tracing pipeline (``draw_image``).
 
-The SDK's geometry layer (``SDK/robonix_sdk/{image,trajectory}.py``) does
-the outline tracing and paper fitting. This module orchestrates the
+The vendored geometry package (``xyz_draw/geometry/{image,trajectory}.py``)
+does the outline tracing and paper fitting. This module orchestrates the
 primitive over gRPC; it never touches the PLC or the TCP protocol.
 
-Coordinate conventions come from the SDK: millimetres, paper origin at
-the lower-left corner, +X right, +Y up, paper surface z=-50, pen up z=-46.
+Coordinate conventions come from the plotter primitive: millimetres, paper
+origin at the lower-left corner, +X right, +Y up. The drawable area and
+pen heights are read from ``robonix/primitive/plotter/geometry`` once on
+activation (falling back to the configured workspace).
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 import math
 import os
@@ -216,15 +219,18 @@ def _parse_config(cfg: dict) -> SkillConfig:
         raise ValueError(
             f"workspace must be a mapping, got {type(raw_workspace).__name__}"
         )
+    # The workspace geometry (drawable area + pen heights) is authoritative
+    # in the plotter primitive and is fetched on activate. Config values are
+    # neutral placeholders (all-zero) and are NOT validated here; the real
+    # geometry replaces them once the primitive is reachable.
     workspace = Workspace(
         x_min=_num(raw_workspace, "x_min", 0.0),
-        x_max=_num(raw_workspace, "x_max", 180.0),
+        x_max=_num(raw_workspace, "x_max", 0.0),
         y_min=_num(raw_workspace, "y_min", 0.0),
-        y_max=_num(raw_workspace, "y_max", 150.0),
-        z_up=_num(raw_workspace, "z_up", -46.0),
-        z_down=_num(raw_workspace, "z_down", -50.0),
+        y_max=_num(raw_workspace, "y_max", 0.0),
+        z_up=_num(raw_workspace, "z_up", 0.0),
+        z_down=_num(raw_workspace, "z_down", 0.0),
     )
-    workspace.validate()
 
     paper_w = workspace.x_max - workspace.x_min
     paper_h = workspace.y_max - workspace.y_min
@@ -1337,9 +1343,42 @@ def activate():
     old, _state["client"] = _state["client"], None
     if old is not None:
         old.close()
-    _state["client"] = PrimitiveClient(
+    client = PrimitiveClient(
         bindings, default_timeout_s=config.trajectory_timeout_s
     )
+    _state["client"] = client
+    try:
+        geo = client.get_geometry()
+        # Refresh both the workspace and the canvas default size, which is
+        # derived from the drawable area reported by the primitive.
+        _state["config"] = dataclasses.replace(
+            config,
+            workspace=Workspace(
+                x_min=geo.x_min, x_max=geo.x_max,
+                y_min=geo.y_min, y_max=geo.y_max,
+                z_up=geo.z_up, z_down=geo.z_down,
+            ),
+            generate_default_width_mm=geo.x_max - geo.x_min,
+            generate_default_height_mm=geo.y_max - geo.y_min,
+        )
+        log.info(
+            "geometry from primitive: x_max=%.1f y_max=%.1f z_up=%.2f z_down=%.2f",
+            geo.x_max, geo.y_max, geo.z_up, geo.z_down,
+        )
+    except Exception as exc:  # noqa: BLE001 - activation must never raise
+        # Degrade instead of failing: a provider stuck in ERROR cannot be
+        # activated again until the whole stack restarts.
+        usable = (
+            config.workspace.x_max > config.workspace.x_min
+            and config.workspace.y_max > config.workspace.y_min
+        )
+        if usable:
+            log.warning("geometry unavailable; using configured workspace: %s", exc)
+        else:
+            log.error(
+                "geometry unavailable and no workspace configured; "
+                "drawing will fail until one is set: %s", exc,
+            )
     _state["active"] = True
     log.info(
         "activated: trajectory=%s home=%s",

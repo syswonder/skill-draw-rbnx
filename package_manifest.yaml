@@ -20,11 +20,25 @@ start: bash scripts/start.sh
 # the gRPC stubs this skill calls.
 capabilities:
   - name: robonix/skill/plot/driver
+    path: capabilities/driver.v1.toml
+    transport: grpc
   - name: robonix/skill/plot/config
+    path: capabilities/config.v1.toml
+    transport: mcp
   - name: robonix/skill/plot/render_preview
+    path: capabilities/render_preview.v1.toml
+    transport: mcp
   - name: robonix/skill/plot/draw_scene
+    path: capabilities/draw_scene.v1.toml
+    transport: mcp
   - name: robonix/skill/plot/draw_prompt
+    path: capabilities/draw_prompt.v1.toml
+    transport: mcp
   - name: robonix/skill/plot/draw_image
+    path: capabilities/draw_image.v1.toml
+    transport: mcp
   - name: robonix/skill/plot/list_images
+    path: capabilities/list_images.v1.toml
+    transport: mcp
 
 depends: []

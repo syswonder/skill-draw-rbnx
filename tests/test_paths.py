@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Directory policy tests for render_preview / draw_image / list_images."""
+"""Directory policy tests for render_preview / image / list_images."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from xyz_draw.paths import ImagePathError, ImageStore
+from draw.paths import ImagePathError, ImageStore
 
 
 def _store(tmp_path: Path, **kwargs) -> tuple[ImageStore, Path]:

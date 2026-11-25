@@ -12,8 +12,8 @@ pytest.importorskip("PIL")
 
 from PIL import Image  # noqa: E402
 
-from xyz_draw import imagegen  # noqa: E402
-from xyz_draw.imagegen import (  # noqa: E402
+from draw import imagegen  # noqa: E402
+from draw.imagegen import (  # noqa: E402
     ImageGenError,
     ImageGenOptions,
     build_payload,
@@ -22,7 +22,7 @@ from xyz_draw.imagegen import (  # noqa: E402
     generate_image,
     write_png,
 )
-from xyz_draw.metadata import read_png_hints  # noqa: E402
+from draw.metadata import read_png_hints  # noqa: E402
 
 
 def _options(**overrides) -> ImageGenOptions:
@@ -130,7 +130,7 @@ def test_write_png_composites_transparency_over_white(tmp_path):
         assert image.format == "PNG"
         assert image.mode == "RGB"
         assert image.getpixel((0, 0)) == (255, 255, 255)
-    # Tagged so a later draw_image call does not mirror the image.
+    # Tagged so a later image call does not mirror the image.
     assert read_png_hints(str(path)).orientation == "screen"
     assert not (tmp_path / "cat.png.tmp").exists()
 

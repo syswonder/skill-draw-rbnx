@@ -9,7 +9,7 @@ The draw skill is deliberately boring about files:
   * absolute paths are accepted only when they resolve inside a read root.
 
 ``output_dir`` defaults to ``image_dir``. Keeping both readable means a
-generated PNG can always be passed straight back to ``draw_image``, even
+generated PNG can always be passed straight back to ``image``, even
 when the two directories differ.
 
 Relative directory names are resolved against ``ROBONIX_WORKSPACE`` when

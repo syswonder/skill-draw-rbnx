@@ -26,11 +26,11 @@ config:
   # per-point z rather than its own configured pen heights.
 
   # bool, default: false. If true, run the primitive home routine after
-  # every successful draw_image or draw_scene. The per-call auto_home flag
+  # every successful image or scene. The per-call auto_home flag
   # ORs with this.
   auto_home: false
 
-  # bool, default: true. If true, draw_scene/draw_image/draw_prompt run the
+  # bool, default: true. If true, scene/image/prompt run the
   # primitive HOME routine before sending a trajectory. plotter_home remains
   # a separate MCP tool: a planner that already homed should pass
   # skip_home=true so the routine is not repeated. auto_home above still
@@ -38,34 +38,34 @@ config:
   home_before_draw: true
 
   # ── file roots ─────────────────────────────────────────────────────
-  # draw_image and list_images read only these directories; render_preview
+  # image and list_images read only these directories; render_preview
   # writes normal output only to output_dir. Relative paths are resolved
   # against ROBONIX_WORKSPACE when set, otherwise the deployment root (the
   # directory containing packages/). The default is <deployment>/images.
   image_dir: images
 
   # Empty means "same as image_dir". output_dir is always readable, so a
-  # generated PNG can be passed straight back to draw_image.
+  # generated PNG can be passed straight back to the image tool.
   output_dir: ""
 
   # bool, default: false. Preview switch.
-  # When true, render_preview is enabled and every non-dry_run draw_scene
+  # When true, render_preview is enabled and every non-dry_run scene
   # also writes last_preview.png into output_dir before moving (unless the
   # call sets skip_preview=true). Preview failures are reported as warnings
   # and never block drawing. When false, render_preview returns success=false
-  # and writes nothing; draw_scene stays side-effect free.
-  # draw_scene dry_run=true never renders a PNG.
+  # and writes nothing; scene stays side-effect free.
+  # scene dry_run=true never renders a PNG.
   debug: false
 
-  # ── draw_prompt / image generation ─────────────────────────────────
-  # bool, default: false. Enables the draw_prompt tool, which asks an
+  # ── prompt / image generation ─────────────────────────────────
+  # bool, default: false. Enables the prompt tool, which asks an
   # OpenAI-compatible image service for a PNG and then traces it with
-  # draw_image. When false, draw_prompt returns success=false without any
-  # network request; draw_scene/draw_image remain fully available.
+  # image. When false, prompt returns success=false without any
+  # network request; scene/image remain fully available.
   imagegen_enabled: false
 
   # string, default: "". OpenAI-compatible base URL, e.g.
-  # http://127.0.0.1:8000/v1. draw_prompt POSTs to
+  # http://127.0.0.1:8000/v1. prompt POSTs to
   # <base>/images/generations; a full .../images/generations URL is also
   # accepted. Required when imagegen_enabled=true.
   imagegen_base_url: ""
@@ -79,7 +79,7 @@ config:
   imagegen_api_key: ""
 
   # string, default: "1024x1024". "size" passed to the service; the
-  # per-call draw_prompt.size field overrides it. Empty omits the field.
+  # per-call prompt.size field overrides it. Empty omits the field.
   imagegen_size: "1024x1024"
 
   # float seconds, default: 120.0, 1..1800. Timeout for the generation
@@ -97,7 +97,7 @@ config:
   # int >= 1, default: 200. Cap on list_images results.
   max_list_images: 200
 
-  # ── draw_image defaults ────────────────────────────────────────────
+  # ── image defaults ────────────────────────────────────────────
   # float pixels, default: 1.5. Douglas-Peucker tolerance on traced
   # outlines/skeletons. 0 disables simplification; negative uses this value.
   simplify_px: 1.5
@@ -110,13 +110,13 @@ config:
   # occupy, preserving aspect ratio. Ignored for 1:1 draws.
   image_fill: 0.8
 
-  # string, default: "auto". Default tracing strategy for draw_image.
+  # string, default: "auto". Default tracing strategy for image.
   #   auto      skeleton for PNGs written by render_preview (they carry
   #             Robonix metadata), outline for third-party images
   #   outline   ink boundary via marching squares — silhouettes/filled art
   #   skeleton  ink centreline via Zhang-Suen thinning — line art
   #   lineart   difference-of-Gaussians edges then skeleton — photos
-  # The per-call draw_image.trace field overrides this value.
+  # The per-call image.trace field overrides this value.
   trace: "auto"
 
   # float >= 0.1, default: 1.2. Gaussian sigma for the lineart edge filter.
@@ -142,7 +142,7 @@ config:
   trace_bridge_px: 3.0
 
   # ── preview renderer defaults ──────────────────────────────────────
-  # Used by render_preview (debug=true) and by draw_scene when parsing a
+  # Used by render_preview (debug=true) and by scene when parsing a
   # scene (scene size limits and the default canvas).
   # Default canvas when the JSON scene omits width_mm/height_mm. 0 means
   # "use the drawable area reported by the plotter primitive". Any positive
@@ -180,7 +180,7 @@ config:
 
   # int, default: 50000. Reject a trajectory plan larger than this before
   # moving. Generated line art is traced, so dense scenes can exceed this.
-  # draw_scene shares this limit (and generate_max_strokes/points for the
+  # scene shares this limit (and generate_max_strokes/points for the
   # scene size). It does not need a PNG; a debug preview is written only
   # when debug=true unless skip_preview=true.
   max_points: 50000

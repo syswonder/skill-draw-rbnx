@@ -9,13 +9,13 @@ import pytest
 
 pytest.importorskip("PIL")
 
-from xyz_draw.generate import (  # noqa: E402
+from draw.generate import (  # noqa: E402
     GenerateError,
     GenerateOptions,
     generate_scene,
     parse_scene,
 )
-from xyz_draw.metadata import read_png_hints  # noqa: E402
+from draw.metadata import read_png_hints  # noqa: E402
 
 
 def _opts(**overrides) -> GenerateOptions:

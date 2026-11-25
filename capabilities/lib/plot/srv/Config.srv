@@ -7,10 +7,10 @@
 #
 # Planning rules:
 #   structured/geometric request:
-#       plotter_home -> render_preview (debug=true only) -> draw_scene
+#       plotter_home -> render_preview (debug=true only) -> scene
 #   free-form/illustrative request with imagegen_ready=true:
-#       plotter_home -> draw_prompt
-#       on failure: author a simple declarative scene and use draw_scene
+#       plotter_home -> prompt
+#       on failure: author a simple declarative scene and use scene
 #   Preview failures never block drawing.
 #
 # plotter_home and render_preview are separate tool calls. Pass
@@ -19,11 +19,11 @@
 ---
 bool    success
 string  message
-# render_preview is enabled and draw_scene writes the preview PNG itself.
+# render_preview is enabled and scene writes the preview PNG itself.
 bool    debug
-# draw_prompt is enabled in the skill config.
+# prompt is enabled in the skill config.
 bool    imagegen_enabled
-# draw_prompt has everything it needs (enabled + base URL + model).
+# prompt has everything it needs (enabled + base URL + model).
 bool    imagegen_ready
 string  image_dir
 string  output_dir

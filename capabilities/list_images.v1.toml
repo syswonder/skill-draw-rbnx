@@ -1,5 +1,5 @@
 [contract]
-id      = "robonix/skill/plot/list_images"
+id      = "robonix/skill/draw/list_images"
 version = "1"
 kind    = "skill"
 idl     = "plot/srv/ListImages.srv"

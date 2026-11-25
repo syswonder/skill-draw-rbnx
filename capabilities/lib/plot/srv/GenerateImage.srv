@@ -2,8 +2,8 @@
 #
 # This is the debug/preview path, not the drawing path. It is enabled only
 # when the skill config has debug=true. With debug=false the call returns
-# success=false and writes nothing; plot with draw_scene (declarative
-# scenes) or draw_image (existing image files) instead.
+# success=false and writes nothing; plot with scene (declarative
+# scenes) or image (existing image files) instead.
 #
 # The skill does NOT execute Python or arbitrary drawing code. spec is a
 # JSON object with millimetre coordinates on a canvas whose origin is the
@@ -40,13 +40,13 @@
 # The skill config's debug flag gates this tool. With debug=true the PNG
 # is rendered and written to output_dir, and image_path is set. With
 # debug=false the request is rejected and no file is written; use
-# draw_scene or draw_image to plot instead.
+# scene or image to plot instead.
 #
 # pixel_to_mm <= 0, line_width_mm <= 0, and supersample <= 0 use the
 # skill config. pixel_to_mm is millimetres per pixel, matching the SDK
 # and the PNG metadata (0.25 = 4 px/mm). The PNG embeds Robonix
-# orientation/scale metadata so draw_image can reproduce it upright and
-# at 1:1 scale, but draw_scene is the preferred way to plot the same
+# orientation/scale metadata so image can reproduce it upright and
+# at 1:1 scale, but scene is the preferred way to plot the same
 # scene.
 string  spec
 string  output_name

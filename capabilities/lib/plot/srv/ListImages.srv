@@ -1,4 +1,4 @@
-# List image files that draw_image is allowed to read.
+# List image files that the image tool is allowed to read.
 #
 # Searches image_dir and output_dir non-recursively. filter is an optional
 # case-insensitive filename substring. Results are absolute paths, sorted

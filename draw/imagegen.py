@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""OpenAI-compatible text-to-image client used by ``draw_prompt``.
+"""OpenAI-compatible text-to-image client used by ``prompt``.
 
 The draw skill does not own a generative model. When ``imagegen_enabled`` is
 true, this module POSTs to an OpenAI-compatible ``/images/generations``
@@ -140,7 +140,7 @@ def write_png(
 
     Transparency is composited over white so the line-art tracer sees ink on
     a light background. The PNG is tagged ``robonix_orientation=screen`` so a
-    later ``draw_image`` call draws it upright instead of mirroring the raw
+    later ``image`` call draws it upright instead of mirroring the raw
     raster. Returns the image dimensions.
     """
     try:

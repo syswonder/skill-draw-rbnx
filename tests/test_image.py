@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from xyz_draw.image import ImageError, image_to_waypoints, image_to_waypoints_ex
-from xyz_draw.plan import Workspace
+from draw.image import ImageError, image_to_waypoints, image_to_waypoints_ex
+from draw.plan import Workspace
 
 
 def _top_left_dot(path, size: int = 40) -> str:
@@ -43,7 +43,7 @@ def test_flip_y_draws_the_screen_orientation(tmp_path):
 
 
 def test_unlabelled_png_defaults_to_screen_orientation():
-    from xyz_draw.metadata import ImageHints, resolve_flip_y
+    from draw.metadata import ImageHints, resolve_flip_y
 
     plain = ImageHints()
     # A plain PNG (no Robonix metadata) is drawn the way it is displayed.
@@ -60,7 +60,7 @@ def test_unlabelled_png_defaults_to_screen_orientation():
 
 
 def test_unlabelled_png_default_draws_the_screen_orientation(tmp_path):
-    from xyz_draw.metadata import read_png_hints, resolve_flip_y
+    from draw.metadata import read_png_hints, resolve_flip_y
 
     path = _top_left_dot(tmp_path / "dot.png")
     flip_y = resolve_flip_y("", read_png_hints(path))
@@ -106,8 +106,8 @@ def test_image_plan_reports_effective_scale(tmp_path):
 
 
 def test_generated_metadata_draws_upright_at_one_to_one(tmp_path):
-    from xyz_draw.generate import GenerateOptions, generate_scene
-    from xyz_draw.metadata import read_png_hints
+    from draw.generate import GenerateOptions, generate_scene
+    from draw.metadata import read_png_hints
 
     path = tmp_path / "top_line.png"
     generate_scene(

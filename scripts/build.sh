@@ -13,7 +13,7 @@ cd "$PKG"
 
 CLEAN="${RBNX_BUILD_CLEAN:-}"
 if [[ "$CLEAN" == "1" ]]; then
-    echo "[xyz_draw/build] clean: removing rbnx-build/"
+    echo "[draw/build] clean: removing rbnx-build/"
     rm -rf rbnx-build
 fi
 mkdir -p rbnx-build
@@ -23,7 +23,7 @@ bash "$ROOT/scripts/uv_sync.sh"
 
 # The image pipeline needs numpy + Pillow at runtime.
 if ! "$ROOT/.venv/bin/python" -c "import numpy, PIL" 2>/dev/null; then
-    echo "[xyz_draw/build] ERR: numpy/Pillow missing from $ROOT/.venv." >&2
+    echo "[draw/build] ERR: numpy/Pillow missing from $ROOT/.venv." >&2
     echo "                   Run: uv sync --project $ROOT --locked" >&2
     exit 2
 fi
@@ -35,8 +35,8 @@ export RBNX_CODEGEN_PYTHON="$ROOT/.venv/bin/python"
 FLAGS=(--out-dir "$PKG/rbnx-build/codegen" --mcp)
 [[ "$CLEAN" == "1" ]] && FLAGS+=(--clean)
 
-echo "[xyz_draw/build] rbnx codegen ${FLAGS[*]}"
+echo "[draw/build] rbnx codegen ${FLAGS[*]}"
 rbnx codegen -p "$PKG" "${FLAGS[@]}"
 
 touch "$PKG/rbnx-build/.rbnx-built"
-echo "[xyz_draw/build] done."
+echo "[draw/build] done."

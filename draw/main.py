@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""xyz_draw — MCP drawing skill for the XYZ pen plotter.
+"""draw — MCP drawing skill for the XYZ pen plotter.
 
-Owns ``robonix/skill/plot/*``:
+Owns ``robonix/skill/draw/*``:
 
   * ``driver``         shared lifecycle contract.
   * ``config``         read-only policy flags (debug, imagegen_ready,
                        preview name, home_before_draw) for the planner.
   * ``render_preview`` declarative JSON scene -> PNG preview in
                        ``output_dir`` (only when config ``debug=true``).
-  * ``draw_scene``     declarative JSON scene -> waypoints, no raster step;
+  * ``scene``     declarative JSON scene -> waypoints, no raster step;
                        homes first and writes ``last_preview.png`` first
                        when ``debug=true``.
-  * ``draw_prompt``    text prompt -> imagegen service -> PNG -> waypoints
+  * ``prompt``    text prompt -> imagegen service -> PNG -> waypoints
                        (only when config ``imagegen_enabled=true``).
-  * ``draw_image``     PNG from ``image_dir``/``output_dir`` -> waypoints.
+  * ``image``     PNG from ``image_dir``/``output_dir`` -> waypoints.
   * ``list_images``    discover drawable files without guessing paths.
 
 Homing and global motion parameters are exposed by the plotter primitive
@@ -23,9 +23,9 @@ LLM/user changes them directly, so drawing never overwrites them.
 Text writing lives in the separate ``skill-write_text-rbnx`` package. This
 skill never executes model-written Python: preview rendering is a fixed
 JSON-scene renderer, drawing is either a fixed vector conversion
-(``draw_scene``) or a fixed raster-tracing pipeline (``draw_image``).
+(``scene``) or a fixed raster-tracing pipeline (``image``).
 
-The vendored geometry package (``xyz_draw/geometry/{image,trajectory}.py``)
+The vendored geometry package (``draw/geometry/{image,trajectory}.py``)
 does the outline tracing and paper fitting. This module orchestrates the
 primitive over gRPC; it never touches the PLC or the TCP protocol.
 
@@ -45,7 +45,7 @@ from dataclasses import dataclass
 
 from robonix_api import Deferred, Err, Ok, Skill
 
-xyz_draw = Skill(id="xyz_draw", namespace="robonix/skill/plot")
+draw = Skill(id="draw", namespace="robonix/skill/draw")
 
 from plot_mcp import (  # type: ignore  # noqa: E402  (rbnx codegen)
     Config_Request,
@@ -91,10 +91,10 @@ from .primitive_client import (  # noqa: E402
 )
 from .scene import scene_to_waypoints  # noqa: E402
 
-log = logging.getLogger("xyz_draw")
+log = logging.getLogger("draw")
 logging.basicConfig(
     level=logging.INFO,
-    format="[xyz_draw] %(levelname)s %(message)s",
+    format="[draw] %(levelname)s %(message)s",
 )
 # basicConfig is a no-op when the runtime already installed root handlers,
 # so pin this logger's level explicitly to keep job logs visible.
@@ -105,15 +105,15 @@ log.setLevel(logging.INFO)
 class SkillConfig:
     workspace: Workspace
     auto_home: bool
-    #: When true, draw_scene/draw_image/draw_prompt run the primitive HOME
+    #: When true, scene/image/prompt run the primitive HOME
     #: routine before sending a trajectory. Planners that already called
     #: plotter_home pass skip_home=true to avoid repeating it.
     home_before_draw: bool
     #: When true, render_preview is enabled and writes PNG previews to
     #: output_dir. When false, render_preview returns an error and callers
-    #: draw directly with draw_scene / draw_image.
+    #: draw directly with scene / image.
     debug: bool
-    #: When true, draw_prompt may call an OpenAI-compatible text-to-image
+    #: When true, prompt may call an OpenAI-compatible text-to-image
     #: service. Disabled calls return success=false without any network I/O.
     imagegen_enabled: bool
     imagegen_base_url: str
@@ -384,10 +384,10 @@ def _generate_options(
 ) -> GenerateOptions:
     """Build renderer/parser limits for the effective workspace.
 
-    ``draw_scene`` may be called with a workspace override smaller than the
+    ``scene`` may be called with a workspace override smaller than the
     configured one, so the default canvas is clamped instead of failing
     ``width_mm must be <= paper`` inside ``parse_scene``. The renderer
-    fields are irrelevant to ``draw_scene`` but share the same parser.
+    fields are irrelevant to ``scene`` but share the same parser.
     """
     if max_width_mm is None:
         paper_w = config.workspace.x_max - config.workspace.x_min
@@ -565,10 +565,10 @@ def _prompt_response(
     if (
         not success
         and message
-        and "draw_scene" not in message
+        and "scene" not in message
         and message != "prompt is empty"
     ):
-        message = f"{message}; fall back to draw_scene with a simple declarative scene"
+        message = f"{message}; fall back to scene with a simple declarative scene"
     return DrawPrompt_Response(
         success=success,
         message=message,
@@ -590,15 +590,15 @@ def _prompt_response(
 
 
 # ── MCP tools ────────────────────────────────────────────────────────
-@xyz_draw.mcp("robonix/skill/plot/config")
-def plot_config(req: Config_Request) -> Config_Response:
+@draw.mcp("robonix/skill/draw/config")
+def config(req: Config_Request) -> Config_Response:
     """Return the drawing policy flags. Read-only: no motion, no files.
 
     Call this before planning a drawing request.
 
-    - ``debug``: render_preview is enabled and a non-dry_run draw_scene
+    - ``debug``: render_preview is enabled and a non-dry_run scene
       writes output_dir/last_preview.png before moving.
-    - ``imagegen_ready``: draw_prompt has an enabled service, base URL and
+    - ``imagegen_ready``: prompt has an enabled service, base URL and
       model, so it can be tried.
     - ``home_before_draw``: draw tools run the primitive HOME routine
       before the trajectory.
@@ -606,11 +606,11 @@ def plot_config(req: Config_Request) -> Config_Response:
     Planning rules:
 
     1. Structured/geometric request (explicit shapes, coordinates or JSON):
-       plotter_home -> render_preview (only when debug=true) -> draw_scene.
-       Pass skip_home=true to draw_scene after plotter_home, and
+       plotter_home -> render_preview (only when debug=true) -> scene.
+       Pass skip_home=true to scene after plotter_home, and
        skip_preview=true when render_preview was just called.
     2. Free-form/illustrative request with imagegen_ready=true:
-       plotter_home -> draw_prompt (skip_home=true). If draw_prompt fails,
+       plotter_home -> prompt (skip_home=true). If prompt fails,
        author a simple declarative scene and continue with rule 1.
     3. Preview failures never block drawing.
 
@@ -642,7 +642,7 @@ def plot_config(req: Config_Request) -> Config_Response:
             elapsed_s=time.monotonic() - started,
         )
     except Exception as exc:  # noqa: BLE001 - never raise across the MCP boundary
-        log.warning("plot_config failed: %s", exc)
+        log.warning("config failed: %s", exc)
         return Config_Response(
             success=False,
             message=str(exc) or exc.__class__.__name__,
@@ -657,18 +657,18 @@ def plot_config(req: Config_Request) -> Config_Response:
         )
 
 
-@xyz_draw.mcp("robonix/skill/plot/render_preview")
+@draw.mcp("robonix/skill/draw/render_preview")
 def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
     """Render a declarative JSON scene to a PNG preview.
 
     This tool is the debug/preview path. It is enabled only when the skill
     config has ``debug: true``; with ``debug: false`` it returns
     ``success=false`` and does not write anything. To actually plot, use
-    ``draw_scene`` (declarative scenes) or ``draw_image`` (existing image
-    files). With ``debug=true``, ``draw_scene`` also writes the preview
+    ``scene`` (declarative scenes) or ``image`` (existing image
+    files). With ``debug=true``, ``scene`` also writes the preview
     itself before moving, so calling this tool first is optional: use it
     when the preview should exist before the draw is planned, then pass
-    ``skip_preview=true`` to ``draw_scene``.
+    ``skip_preview=true`` to ``scene``.
 
     The scene is JSON; coordinates are millimetres on a canvas whose
     origin is the lower-left corner (+X right, +Y up). Example:
@@ -682,7 +682,7 @@ def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
     arc. Each stroke/shape may set width_mm and closed. Strokes are drawn
     first, then shapes, in list order. Only line art: no fills, colours, or
     text. The renderer honours width_mm, antialiasing and supersampling. The
-    PNG is a visual artifact only; draw_scene plots the same geometry as
+    PNG is a visual artifact only; scene plots the same geometry as
     vectors and optionally renders this same preview when debug=true.
 
     The PNG is written only inside the configured output_dir; output_name
@@ -690,14 +690,14 @@ def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
     fixed preview slot ``last_preview.png`` and always overwrites it.
     A caller-supplied name keeps the normal rule: existing files are kept
     unless overwrite=true. The PNG carries orientation/scale metadata, so
-    it can also be passed to draw_image when a rasterised result is
-    explicitly wanted, but draw_scene is the preferred way to plot the
+    it can also be passed to image when a rasterised result is
+    explicitly wanted, but scene is the preferred way to plot the
     same scene.
 
-    This tool is optional when draw_scene is used: with debug=true,
-    draw_scene writes the same last_preview.png before moving. Call this
+    This tool is optional when scene is used: with debug=true,
+    scene writes the same last_preview.png before moving. Call this
     tool first when the preview should be available before planning the
-    draw; pass skip_preview=true to draw_scene afterwards.
+    draw; pass skip_preview=true to scene afterwards.
     """
     started = time.monotonic()
     if not str(req.spec or "").strip():
@@ -709,7 +709,7 @@ def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
             return _generate_response(
                 False,
                 "render_preview is disabled because debug=false; use "
-                "draw_scene for declarative scenes or draw_image for "
+                "scene for declarative scenes or image for "
                 "existing image files",
                 started,
             )
@@ -731,7 +731,7 @@ def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
         message = (
             f"preview written to {generated.path} "
             f"({generated.width_px}x{generated.height_px} px, "
-            f"{generated.stroke_count} strokes); use draw_scene to plot the "
+            f"{generated.stroke_count} strokes); use scene to plot the "
             "same JSON"
         )
         return _generate_response(
@@ -748,7 +748,7 @@ def render_preview(req: GenerateImage_Request) -> GenerateImage_Response:
         return _generate_response(False, str(exc) or exc.__class__.__name__, started)
 
 
-@xyz_draw.mcp("robonix/skill/plot/draw_image")
+@draw.mcp("robonix/skill/draw/image")
 def draw_image(req: DrawImage_Request) -> DrawImage_Response:
     """Draw a PNG image with the XYZ pen plotter.
 
@@ -855,7 +855,7 @@ def draw_image(req: DrawImage_Request) -> DrawImage_Response:
 
         if req.dry_run:
             log.info(
-                "draw_image dry run: %s; %s; %s",
+                "image dry run: %s; %s; %s",
                 input_path, placement, plan_summary,
             )
             return _image_response(
@@ -871,7 +871,7 @@ def draw_image(req: DrawImage_Request) -> DrawImage_Response:
             )
 
         log.info(
-            "draw_image sending: %s; %s; %s",
+            "image sending: %s; %s; %s",
             input_path, placement, plan_summary,
         )
         client = _client()
@@ -882,7 +882,7 @@ def draw_image(req: DrawImage_Request) -> DrawImage_Response:
         )
         if not response.success:
             log.warning(
-                "draw_image primitive stopped after %d/%d points: %s",
+                "image primitive stopped after %d/%d points: %s",
                 response.points_completed,
                 response.points_accepted,
                 response.message,
@@ -912,7 +912,7 @@ def draw_image(req: DrawImage_Request) -> DrawImage_Response:
                 else f"; auto home failed: {home_response.message}"
             )
 
-        log.info("draw_image ok: %s; %s; %s", input_path, placement, plan_summary)
+        log.info("image ok: %s; %s; %s", input_path, placement, plan_summary)
         return _image_response(
             True,
             message,
@@ -934,15 +934,15 @@ def draw_image(req: DrawImage_Request) -> DrawImage_Response:
         RuntimeError,
         ValueError,
     ) as exc:
-        log.warning("draw_image failed: %s", exc)
+        log.warning("image failed: %s", exc)
         return _image_response(False, str(exc), started)
     except Exception as exc:  # noqa: BLE001 - never raise across the MCP boundary
-        log.exception("draw_image raised unexpectedly")
+        log.exception("image raised unexpectedly")
         return _image_response(False, str(exc) or exc.__class__.__name__, started)
 
 
-@xyz_draw.mcp("robonix/skill/plot/draw_scene")
-def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
+@draw.mcp("robonix/skill/draw/scene")
+def scene(req: DrawScene_Request) -> DrawScene_Response:
     """Plot a declarative JSON scene directly, without rasterising it.
 
     Use this as the primary plotting tool. The JSON format is identical to
@@ -953,7 +953,7 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
     the separate text skill for text).
 
     Every stroke becomes exactly one pen-down polyline. Unlike
-    render_preview followed by draw_image, the plotted geometry is never
+    render_preview followed by image, the plotted geometry is never
     rasterised and the ink is never contour-traced, so a line is drawn once
     (not as two parallel outline sides) and circles/arcs stay smooth.
     width_mm is ignored for plotting: the physical pen tip defines line
@@ -1011,7 +1011,7 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
         plan_summary = describe_plan(plan)
 
         if req.dry_run:
-            log.info("draw_scene dry run: %s; %s", summary, plan_summary)
+            log.info("scene dry run: %s; %s", summary, plan_summary)
             return _scene_response(
                 True,
                 f"dry run: {summary}; machine not moved",
@@ -1020,7 +1020,7 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
                 scene_plan=scene_plan,
             )
 
-        log.info("draw_scene sending: %s; %s", summary, plan_summary)
+        log.info("scene sending: %s; %s", summary, plan_summary)
         client = _client()
         if not bool(getattr(req, "skip_home", False)):
             _home_before_motion(client, config)
@@ -1033,9 +1033,9 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
                     str(req.spec), preview_output, options, write=True
                 )
                 preview_note = f"; preview written to {generated.path}"
-                log.info("draw_scene preview: %s", generated.path)
+                log.info("scene preview: %s", generated.path)
             except Exception as exc:  # noqa: BLE001 - preview never blocks
-                log.warning("draw_scene preview failed (continuing): %s", exc)
+                log.warning("scene preview failed (continuing): %s", exc)
                 preview_note = f"; preview failed (continuing): {exc}"
 
         response = client.run_trajectory(
@@ -1043,7 +1043,7 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
         )
         if not response.success:
             log.warning(
-                "draw_scene primitive stopped after %d/%d points: %s",
+                "scene primitive stopped after %d/%d points: %s",
                 response.points_completed,
                 response.points_accepted,
                 response.message,
@@ -1067,7 +1067,7 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
                 else f"; auto home failed: {home_response.message}"
             )
 
-        log.info("draw_scene ok: %s; %s", summary, plan_summary)
+        log.info("scene ok: %s; %s", summary, plan_summary)
         return _scene_response(
             True, message, started, plan=plan, scene_plan=scene_plan
         )
@@ -1081,25 +1081,25 @@ def draw_scene(req: DrawScene_Request) -> DrawScene_Response:
         RuntimeError,
         ValueError,
     ) as exc:
-        log.warning("draw_scene failed: %s", exc)
+        log.warning("scene failed: %s", exc)
         return _scene_response(False, str(exc), started)
     except Exception as exc:  # noqa: BLE001 - never raise across the MCP boundary
-        log.exception("draw_scene raised unexpectedly")
+        log.exception("scene raised unexpectedly")
         return _scene_response(False, str(exc) or exc.__class__.__name__, started)
 
 
-@xyz_draw.mcp("robonix/skill/plot/draw_prompt")
-def draw_prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
+@draw.mcp("robonix/skill/draw/prompt")
+def prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
     """Generate an image from a text prompt and draw it with the pen.
 
     Use this as the preferred path for free-form/illustrative requests
-    (for example "draw a cat") when imagegen is ready; check plot_config
+    (for example "draw a cat") when imagegen is ready; check config
     first. When the request specifies exact geometry, coordinates or JSON,
-    use draw_scene instead.
+    use scene instead.
 
     Every successful generation writes the PNG into ``output_dir`` before
     tracing happens, even if the later drawing step fails. On any failure,
-    fall back to draw_scene with a simple declarative scene authoring the
+    fall back to scene with a simple declarative scene authoring the
     geometry from the request; do not retry the same prompt.
 
     This tool is disabled unless the skill config has
@@ -1128,8 +1128,8 @@ def draw_prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
         if not config.imagegen_enabled:
             return _prompt_response(
                 False,
-                "draw_prompt is disabled because imagegen_enabled=false; "
-                "use draw_scene for declarative scenes or draw_image for "
+                "the prompt tool is disabled because imagegen_enabled=false; "
+                "use scene for declarative scenes or image for "
                 "existing image files",
                 started,
             )
@@ -1197,7 +1197,7 @@ def draw_prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
         prefix = f"generated {output.name} ({width_px}x{height_px} px)"
         if not result.success:
             log.warning(
-                "draw_prompt drawing failed: %s -> %s; %s",
+                "prompt drawing failed: %s -> %s; %s",
                 prompt[:80], output, result.message,
             )
             return _prompt_response(
@@ -1211,7 +1211,7 @@ def draw_prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
             )
 
         log.info(
-            "draw_prompt ok: %s -> %s (%d points, trace=%s)",
+            "prompt ok: %s -> %s (%d points, trace=%s)",
             prompt[:80], output, result.points, trace,
         )
         return _prompt_response(
@@ -1233,24 +1233,24 @@ def draw_prompt(req: DrawPrompt_Request) -> DrawPrompt_Response:
         RuntimeError,
         ValueError,
     ) as exc:
-        log.warning("draw_prompt failed: %s", exc)
+        log.warning("prompt failed: %s", exc)
         return _prompt_response(False, str(exc), started)
     except Exception as exc:  # noqa: BLE001 - never raise across the MCP boundary
-        log.exception("draw_prompt raised unexpectedly")
+        log.exception("prompt raised unexpectedly")
         return _prompt_response(
             False, str(exc) or exc.__class__.__name__, started
         )
 
 
-@xyz_draw.mcp("robonix/skill/plot/list_images")
+@draw.mcp("robonix/skill/draw/list_images")
 def list_images(req: ListImages_Request) -> ListImages_Response:
-    """List image files that draw_image is allowed to read.
+    """List image files that image is allowed to read.
 
     Searches image_dir and output_dir (non-recursively), sorted by
     filename. filter is an optional case-insensitive filename substring.
     Use this whenever the user says "draw the picture you just made" or
     names a file, then pass one of the returned absolute paths to
-    draw_image. Supported suffixes are configured (PNG/JPEG/BMP/WebP by
+    image. Supported suffixes are configured (PNG/JPEG/BMP/WebP by
     default).
     """
     started = time.monotonic()
@@ -1297,13 +1297,13 @@ def list_images(req: ListImages_Request) -> ListImages_Response:
 
 
 # ── lifecycle ────────────────────────────────────────────────────────
-@xyz_draw.on_init
+@draw.on_init
 def init(cfg: dict):
     """REGISTERED -> INACTIVE. Parse and validate config only."""
     try:
         config = _parse_config(cfg or {})
     except (TypeError, ValueError, PlanError) as exc:
-        return Err(f"invalid xyz_draw config: {exc}")
+        return Err(f"invalid draw config: {exc}")
 
     _state["config"] = config
     log.info(
@@ -1322,7 +1322,7 @@ def init(cfg: dict):
     return Ok()
 
 
-@xyz_draw.on_activate
+@draw.on_activate
 def activate():
     """INACTIVE -> ACTIVE. Resolve the plotter primitive endpoints."""
     config = _state["config"]
@@ -1331,7 +1331,7 @@ def activate():
 
     try:
         bindings = resolve_endpoints(
-            xyz_draw, timeout_s=config.resolve_timeout_s
+            draw, timeout_s=config.resolve_timeout_s
         )
     except PrimitiveDiscoveryError as exc:
         # Stay INACTIVE so the next MCP call retries activation instead of
@@ -1388,7 +1388,7 @@ def activate():
     return Ok()
 
 
-@xyz_draw.on_deactivate
+@draw.on_deactivate
 def deactivate():
     """ACTIVE -> INACTIVE. Drop the primitive gRPC channels."""
     _state["active"] = False
@@ -1399,7 +1399,7 @@ def deactivate():
     return Ok()
 
 
-@xyz_draw.on_shutdown
+@draw.on_shutdown
 def shutdown():
     deactivate()
     log.info("shutdown")
@@ -1407,7 +1407,7 @@ def shutdown():
 
 
 def main() -> int:
-    xyz_draw.run()
+    draw.run()
     return 0
 
 

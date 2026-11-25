@@ -1,28 +1,24 @@
 # skill-draw-rbnx
 
-Robonix **skill** for declarative scene drawing, prompt-to-image drawing,
+Robonix skill for declarative scene drawing, prompt-to-image drawing,
 debug previews, and traced image drawing. It owns
-`robonix/skill/plot/*` and turns JSON scenes, generated PNGs, or existing
+`robonix/skill/draw/*` and turns JSON scenes, generated PNGs, or existing
 images into pen-up/down waypoints for the plotter primitive.
 
-Catalog name: `robonix.skill.draw`.
-
 The skill never talks TCP or PLC. It resolves the plotter primitive through
-Atlas and reuses the repository [`SDK/`](../../../SDK) for image geometry;
-`skeleton` and `lineart` tracing live in [`xyz_draw/trace.py`](xyz_draw/trace.py).
-Text writing lives in [`skill-write_text-rbnx`](../skill-write_text-rbnx).
+Atlas.
 
 ## Capability surface
 
 | Contract | Mode | Transport | Source / handler |
 | --- | --- | --- | --- |
-| `robonix/skill/plot/driver` | rpc | gRPC | `Driver(CMD_INIT, config_json)` — lifecycle gate |
-| `robonix/skill/plot/config` | rpc + MCP | MCP | `plot_config() → debug, imagegen_enabled, imagegen_ready, output_dir, preview_name, home_before_draw`; read-only |
-| `robonix/skill/plot/draw_scene` | rpc + MCP | MCP | `draw_scene(spec, offset_x, offset_y, dry_run, auto_home, skip_home, skip_preview, workspace)` |
-| `robonix/skill/plot/draw_prompt` | rpc + MCP | MCP | `draw_prompt(prompt, output_name, overwrite, trace, size, flip, dry_run, auto_home, skip_home, workspace)` |
-| `robonix/skill/plot/render_preview` | rpc + MCP | MCP | `render_preview(spec, output_name, overwrite, pixel_to_mm, line_width_mm, supersample)` |
-| `robonix/skill/plot/draw_image` | rpc + MCP | MCP | `draw_image(image_path, orientation, trace, scale, offsets, thresholds, dry_run, auto_home, skip_home, workspace)` |
-| `robonix/skill/plot/list_images` | rpc + MCP | MCP | `list_images(filter)` |
+| `robonix/skill/draw/driver` | rpc | gRPC | `Driver(CMD_INIT, config_json)` — lifecycle gate |
+| `robonix/skill/draw/config` | rpc + MCP | MCP | `config() → debug, imagegen_enabled, imagegen_ready, output_dir, preview_name, home_before_draw`; read-only |
+| `robonix/skill/draw/scene` | rpc + MCP | MCP | `scene(spec, offset_x, offset_y, dry_run, auto_home, skip_home, skip_preview, workspace)` |
+| `robonix/skill/draw/prompt` | rpc + MCP | MCP | `prompt(prompt, output_name, overwrite, trace, size, flip, dry_run, auto_home, skip_home, workspace)` |
+| `robonix/skill/draw/render_preview` | rpc + MCP | MCP | `render_preview(spec, output_name, overwrite, pixel_to_mm, line_width_mm, supersample)` |
+| `robonix/skill/draw/image` | rpc + MCP | MCP | `draw_image(image_path, orientation, trace, scale, offsets, thresholds, dry_run, auto_home, skip_home, workspace)` |
+| `robonix/skill/draw/list_images` | rpc + MCP | MCP | `list_images(filter)` |
 
 Every trajectory tool validates the complete plan before moving.
 Out-of-workspace points, an empty plan, or more than `max_points` waypoints
@@ -31,14 +27,14 @@ bounds without moving.
 
 ## Drawing policy
 
-Call `plot_config` before planning a drawing request. It exposes the runtime
+Call `config` before planning a drawing request. It exposes the runtime
 switches that the planner cannot otherwise see:
 
 | Flag | Meaning |
 | --- | --- |
-| `debug` | `render_preview` is enabled, and a non-dry-run `draw_scene` writes `output_dir/last_preview.png` before moving |
-| `imagegen_enabled` | `draw_prompt` is enabled in config |
-| `imagegen_ready` | `draw_prompt` is enabled **and** has a base URL and model |
+| `debug` | `render_preview` is enabled, and a non-dry-run `scene` writes `output_dir/last_preview.png` before moving |
+| `imagegen_enabled` | `prompt` is enabled in config |
+| `imagegen_ready` | `prompt` is enabled **and** has a base URL and model |
 | `home_before_draw` | draw tools run the primitive HOME routine before the trajectory |
 | `preview_name` | fixed preview filename (`last_preview.png`) |
 
@@ -46,15 +42,15 @@ Routing:
 
 | Request | Path |
 | --- | --- |
-| Structured/geometric (shapes, coordinates, JSON) | `plotter_home` → `render_preview` (only if `debug=true`) → `draw_scene` |
-| Free-form/illustrative and `imagegen_ready=true` | `plotter_home` → `draw_prompt`; on failure, author a simple declarative scene and continue with `draw_scene` |
+| Structured/geometric (shapes, coordinates, JSON) | `plotter_home` → `render_preview` (only if `debug=true`) → `scene` |
+| Free-form/illustrative and `imagegen_ready=true` | `plotter_home` → `prompt`; on failure, author a simple declarative scene and continue with `scene` |
 
 Pass `skip_home=true` after `plotter_home` and `skip_preview=true` after
 `render_preview`. The skill still enforces home/preview when the flags are
 missing, so the plan remains advisory rather than a hard requirement.
 Preview failures are warnings and never block drawing.
 
-## `draw_scene`
+## `scene`
 
 The primary tool for structured drawings. The scene is never rasterised for
 plotting and is never contour-traced: every stroke/shape becomes exactly one
@@ -108,25 +104,25 @@ Renders the same JSON scene to a black-on-white line-art PNG.
 - An empty `output_name` selects the fixed slot `last_preview.png` and
   overwrites it; an explicit name keeps the normal `overwrite` rules.
 - The PNG is written only inside `output_dir` and carries orientation/scale
-  metadata that `draw_image` understands.
-- `draw_scene` writes the same `last_preview.png` automatically when
+  metadata that `image` understands.
+- `scene` writes the same `last_preview.png` automatically when
   `debug=true`, so this tool is optional. Call it first when the preview
   must exist before the draw is planned, then pass `skip_preview=true`.
 - It does not move the machine, so there is no `dry_run`; validation is the
-  same as for `draw_scene`.
+  same as for `scene`.
 
-## `draw_prompt`
+## `prompt`
 
 Generates an image from a text prompt and draws it. This is the preferred
 path for free-form/illustrative requests when `imagegen_ready=true`; use
-`draw_scene` when the request specifies exact geometry or JSON.
+`scene` when the request specifies exact geometry or JSON.
 
 ```text
 prompt
   → POST {imagegen_base_url}/images/generations   (OpenAI-compatible)
   → decode b64_json or download the returned URL
   → normalise to RGB PNG, write it into output_dir
-  → draw_image(trace=lineart) → waypoints → primitive
+  → image(trace=lineart) → waypoints → primitive
 ```
 
 - **Disabled by default.** Requires `imagegen_enabled: true`, a non-empty
@@ -139,7 +135,7 @@ prompt
   `flip=true` selects the raw paper-raster direction (vertically mirrored).
 - `dry_run=true` still generates the PNG and plans waypoints, but does not
   move the machine.
-- On failure, fall back to `draw_scene` with a simple scene authored from the
+- On failure, fall back to `scene` with a simple scene authored from the
   request; do not retry the same prompt.
 - HOME runs before the trajectory unless `skip_home=true`; `auto_home` homes
   after a successful draw.
@@ -149,7 +145,7 @@ prompt
 This is a separate text-to-image service, not the Pilot's VLM. The VLM can
 read images but cannot generate them.
 
-## `draw_image`
+## `image`
 
 Traces a PNG/JPEG/BMP/WebP file inside the allowed roots and draws it.
 
@@ -165,7 +161,7 @@ image
 
 | `trace` | Algorithm | Best for |
 | --- | --- | --- |
-| `outline` | SDK marching squares on the ink boundary, then Douglas-Peucker | silhouettes and filled shapes; line art becomes two parallel sides |
+| `outline` | Marching squares on the ink boundary, then Douglas-Peucker | silhouettes and filled shapes; line art becomes two parallel sides |
 | `skeleton` | Zhang-Suen thinning to the ink centreline, then Douglas-Peucker | line art, logos, handwriting; one pen stroke per line |
 | `lineart` | Difference-of-Gaussians edges with a hysteresis threshold, then thinning | photos and grey artwork; produces line art instead of filled blobs |
 | `""` / `auto` | `skeleton` for PNGs with Robonix metadata, otherwise `outline` | backward-compatible default; never auto-selects `lineart` |
@@ -180,16 +176,16 @@ joins nearby endpoints into one stroke. If output is dashed, raise
 Unless `skip_home=true`, HOME runs before the trajectory. `auto_home` homes
 after a successful draw. `dry_run=true` validates and plans without moving.
 
-Prefer `draw_scene` for scenes. `render_preview → draw_image` still pays for
+Prefer `scene` for scenes. `render_preview → image` still pays for
 rasterisation and thinning even though `trace=auto` selects `skeleton`.
 
 ## `list_images`
 
 Lists drawable files directly under `image_dir` and `output_dir` (not
 recursive), optionally filtered by a filename substring. Use it before
-`draw_image` instead of guessing paths.
+`image` instead of guessing paths.
 
-## `plot_config`
+## `config`
 
 Read-only. Returns the policy flags above plus `image_dir`, `output_dir`,
 `preview_name`, and `home_before_draw`. It never moves the machine and never
@@ -209,11 +205,11 @@ writes files.
 
 ## Orientation and scale
 
-`draw_image` does not understand image content; it traces pixels.
+`image` does not understand image content; it traces pixels.
 
 | Input | Default behavior |
 | --- | --- |
-| PNG produced by `render_preview` / `draw_scene` | `robonix_orientation=screen`; drawn upright at the stored millimetre scale; `trace=auto` selects `skeleton` |
+| PNG produced by `render_preview` / `scene` | `robonix_orientation=screen`; drawn upright at the stored millimetre scale; `trace=auto` selects `skeleton` |
 | Third-party PNG, no metadata | drawn screen-upright (as displayed), auto-fitted to paper |
 | Third-party PNG, with metadata | metadata orientation and scale are honoured |
 
@@ -251,7 +247,7 @@ if they are missing it returns `Deferred` and retries on the next MCP call.
 
 ## Driver-init lifecycle
 
-`scripts/start.sh` execs `python3 -m xyz_draw.main`.
+`scripts/start.sh` execs `python3 -m draw.main`.
 
 1. `CMD_INIT`: parse and validate config, image roots, and preview settings;
    no primitive connection.
@@ -267,13 +263,13 @@ skill-draw-rbnx/
 │   ├── driver.v1.toml
 │   ├── config.v1.toml
 │   ├── render_preview.v1.toml
-│   ├── draw_scene.v1.toml
-│   ├── draw_prompt.v1.toml
-│   ├── draw_image.v1.toml
+│   ├── scene.v1.toml
+│   ├── prompt.v1.toml
+│   ├── image.v1.toml
 │   ├── list_images.v1.toml
 │   ├── lib/plot/{srv,msg}/...          # Config, Draw*, GenerateImage, ListImages, Workspace
 │   └── primitive/plotter/...           # mirrored, consume-only contracts
-├── xyz_draw/
+├── draw/
 │   ├── main.py                         # MCP tools + lifecycle
 │   ├── scene.py                        # declarative scene → waypoints
 │   ├── generate.py                     # preview renderer + scene parser
@@ -298,7 +294,7 @@ provider.
 
 ## Config
 
-Deployment config lives in the `xyz_draw` skill `config` block of
+Deployment config lives in the `draw` skill `config` block of
 [`robonix_manifest.yaml`](../../../robonix_manifest.yaml). Full defaults and
 constraints are in [`config.spec`](config.spec).
 
@@ -308,7 +304,7 @@ constraints are in [`config.spec`](config.spec).
 # carries no machine-specific numbers and works on any sized rig.
 image_dir: images          # read root (deployment-root relative)
 output_dir: ""             # empty -> same as image_dir; the only write root
-debug: true                # checked-in deployment value; config.spec default false
+debug: fasle                # checked-in deployment value; config.spec default false
 home_before_draw: true     # HOME before a trajectory
 auto_home: true            # HOME after a successful draw
 imagegen_enabled: false
@@ -358,37 +354,37 @@ Tests cover path policy, scene validation, preview naming, PNG metadata,
 orientation/scale mapping, direct-scene waypoints, skeleton/lineart tracing,
 the image-generation client, and trajectory validation. They need neither the
 Robonix runtime nor a PLC. End-to-end checks need the primitive, a real PLC,
-and — for `draw_prompt` — a reachable image service.
+and — for `prompt` — a reachable image service.
 
 ## Verification
 
 ```bash
-rbnx caps | grep skill/plot
-# Expected: xyz_draw provider with
-#   robonix/skill/plot/{driver,config,draw_scene,draw_prompt,
-#                       render_preview,draw_image,list_images}
+rbnx caps | grep skill/draw
+# Expected: draw provider with
+#   robonix/skill/draw/{driver,config,scene,prompt,
+#                       render_preview,image,list_images}
 ```
 
 Suggested checks, in order:
 
-1. `draw_scene` with `dry_run=true` — point count and bounds, no motion.
+1. `scene` with `dry_run=true` — point count and bounds, no motion.
 2. `render_preview` with `debug=true` — `images/last_preview.png` exists.
-3. `draw_scene` of a small shape — `last_preview.png` is rewritten before
+3. `scene` of a small shape — `last_preview.png` is rewritten before
    motion when `debug=true`.
-4. `list_images` — confirms the filenames visible to `draw_image`.
-5. `draw_image` with `dry_run=true`, then trace a small file for real.
+4. `list_images` — confirms the filenames visible to `image`.
+5. `image` with `dry_run=true`, then trace a small file for real.
 
 ## Known limits
 
 - Scenes are line art only: no fills, colours, gradients, or text. Use
   `skill-write_text-rbnx` for text.
-- `draw_scene` ignores `width_mm` for plotting; the physical pen defines the
+- `scene` ignores `width_mm` for plotting; the physical pen defines the
   stroke width.
 - `outline` traces the ink boundary, so line art becomes two parallel sides.
 - `lineart` extracts edges; it does not reproduce shading or greyscale.
 - `skeleton` on filled regions produces a centreline, not the filled shape.
 - Rotation is not a parameter; pre-rotate the file.
-- `draw_prompt` depends on an external image service and never uses the VLM
+- `prompt` depends on an external image service and never uses the VLM
   for generation.
 - There is no STOP command. A failed job leaves the pen where it stopped;
   home before retrying.

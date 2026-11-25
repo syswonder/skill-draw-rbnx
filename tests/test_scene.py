@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""draw_scene: declarative scene -> direct waypoints (no raster step)."""
+"""scene: declarative scene -> direct waypoints (no raster step)."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from xyz_draw.generate import GenerateError, GenerateOptions
-from xyz_draw.plan import PlanError, Workspace, validate_waypoints
-from xyz_draw.scene import scene_to_waypoints
+from draw.generate import GenerateError, GenerateOptions
+from draw.plan import PlanError, Workspace, validate_waypoints
+from draw.scene import scene_to_waypoints
 
 WS = Workspace(x_max=20.0, y_max=10.0)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from xyz_draw import trace
+from draw import trace
 
 
 def _bar(height=40, width=60, row0=18, thickness=5, col0=10, col1=50):

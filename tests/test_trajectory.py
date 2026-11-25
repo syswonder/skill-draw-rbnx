@@ -7,7 +7,7 @@ import math
 
 import numpy as np
 
-from xyz_draw.geometry import trajectory as trajectory_module
+from draw.geometry import trajectory as trajectory_module
 
 
 def test_open_contour_stops_at_its_end_instead_of_drawing_a_chord():

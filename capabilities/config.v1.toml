@@ -1,5 +1,5 @@
 [contract]
-id      = "robonix/skill/plot/config"
+id      = "robonix/skill/draw/config"
 version = "1"
 kind    = "skill"
 idl     = "plot/srv/Config.srv"

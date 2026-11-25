@@ -14,11 +14,11 @@
 # plotting because the pen tip defines the line width. Fills, colours and
 # text are not supported (text lives in the separate text skill).
 #
-# Unlike render_preview followed by draw_image, this tool never rasterises
+# Unlike render_preview followed by image, this tool never rasterises
 # the scene and never traces ink outlines. Every stroke becomes exactly one
 # pen-down polyline, so a line is drawn once instead of as two parallel
 # outline sides, and circles/arcs keep the geometry that was requested.
-# Use draw_scene for actual plotting; use render_preview (only enabled
+# Use scene for actual plotting; use render_preview (only enabled
 # when config debug=true) when a PNG preview or a file for another tool
 # is needed.
 #

@@ -5,7 +5,7 @@ The tool deliberately does **not** execute Python or arbitrary drawing code.
 The model sends a JSON scene made of strokes and basic shapes; this module
 validates every coordinate, clamps the canvas to the configured paper size,
 and, when requested, renders a black-on-white PNG with the metadata that
-``draw_image`` needs to reproduce the orientation and scale. Validation-only
+``image`` needs to reproduce the orientation and scale. Validation-only
 calls (``write=False``) never import Pillow or touch the filesystem.
 """
 from __future__ import annotations

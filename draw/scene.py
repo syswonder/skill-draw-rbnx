@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
-"""Declarative scene -> absolute waypoints for the ``draw_scene`` tool.
+"""Declarative scene -> absolute waypoints for the ``scene`` tool.
 
-This is the vector path that ``render_preview`` + ``draw_image`` cannot
+This is the vector path that ``render_preview`` + ``image`` cannot
 provide: the scene is never rasterised and no ink outline is traced. Each
 stroke becomes one pen-down polyline, so a 0.5 mm requested line is drawn
 once (not as two parallel outline sides) and circles/arcs keep the
@@ -10,7 +10,7 @@ geometry the caller asked for.
 Coordinates are millimetres on the scene canvas (origin at the lower-left
 corner, +X right, +Y up). The canvas is placed with its origin at the
 workspace origin, plus an optional offset. All waypoints are validated by
-:func:`xyz_draw.plan.validate_waypoints` before reaching the primitive.
+:func:`draw.plan.validate_waypoints` before reaching the primitive.
 """
 from __future__ import annotations
 

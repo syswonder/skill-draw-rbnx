@@ -7,7 +7,7 @@ import math
 
 import pytest
 
-from xyz_draw.plan import (
+from draw.plan import (
     PlanError,
     Workspace,
     dedupe,

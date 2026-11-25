@@ -2,48 +2,48 @@
 description: Drawing skill — plot declarative JSON scenes directly, generate images from prompts, render debug PNG previews, trace images into pen strokes, and list drawable files.
 ---
 
-# Drawing skill (`xyz_draw`)
+# Draw skill
 
 Turns declarative scenes and raster images into waypoints and executes them
 through the plotter primitive. It never executes model-written Python.
 
 ## MCP tools
 
-### `plot_config`
+### `config`
 
 Read-only policy flags for the planner. Call it before choosing a drawing
 path; it never moves the machine and writes no files.
 
-- `debug`: `plot_render_preview` is enabled, and every non-dry-run
-  `plot_draw_scene` writes `output_dir/last_preview.png` before moving.
-- `imagegen_ready`: `plot_draw_prompt` is enabled **and** has a base URL and
+- `debug`: `render_preview` is enabled, and every non-dry-run
+  `scene` writes `output_dir/last_preview.png` before moving.
+- `imagegen_ready`: `prompt` is enabled and has a base URL and
   model. `imagegen_enabled=true` alone is not enough.
 - `home_before_draw`: draw tools run the primitive HOME routine before the
   trajectory.
 - `preview_name` is fixed to `last_preview.png`.
 
 Planning rules: structured/geometric requests use
-`plotter_home → render_preview (debug only) → draw_scene`; free-form requests
-with `imagegen_ready=true` use `plotter_home → draw_prompt`, falling back to
-`draw_scene` on failure. Pass `skip_home=true` / `skip_preview=true` when a
+`plotter_home → render_preview (debug only) → scene`; free-form requests
+with `imagegen_ready=true` use `plotter_home → prompt`, falling back to
+`scene` on failure. Pass `skip_home=true` / `skip_preview=true` when a
 step was already performed so the skill does not repeat it.
 
-### `plot_draw_scene`
+### `scene`
 
-**Primary tool for drawing a declarative scene.** Convert the JSON scene
+Primary tool for drawing a declarative scene. Convert the JSON scene
 straight into pen-down polylines and plot it.
 
 - `spec` (string, required): JSON object with `width_mm`, `height_mm`, and
   `strokes` and/or `shapes`. Supported shapes: `line`, `polyline`, `polygon`,
   `rect`, `circle`, `ellipse`, `arc`. Coordinates are millimetres relative to
   the canvas, origin at the lower-left, +Y up.
-- The scene is **not** rasterised and no ink outline is traced: every stroke
+- The scene is not rasterised and no ink outline is traced: every stroke
   is drawn exactly once, and circles/arcs keep their requested geometry.
   `width_mm` is ignored for plotting because the pen tip defines line width.
 - `offset_x` / `offset_y` translate the canvas origin inside the workspace.
 - `dry_run=true` returns the stroke/waypoint counts and bounding box without
   moving; `auto_home=true` homes after a successful draw.
-- The primitive HOME routine runs **before** the trajectory unless
+- The primitive HOME routine runs before the trajectory unless
   `skip_home=true`; after a successful draw `auto_home` homes again.
 - With `debug=true`, the same scene is rendered to
   `output_dir/last_preview.png` before moving unless `skip_preview=true`.
@@ -51,57 +51,57 @@ straight into pen-down polylines and plot it.
   never homes and never writes a preview.
 - `workspace` can override the configured rectangle and pen heights per call.
 
-### `plot_draw_prompt`
+### `prompt`
 
-Generate an image from a text prompt and draw it. This is the **preferred
-path for free-form/illustrative requests** when `plot_config` reports
-`imagegen_ready=true`; use `plot_draw_scene` when the request specifies
+Generate an image from a text prompt and draw it. This is the preferred
+path for free-form/illustrative requests when `config` reports
+`imagegen_ready=true`; use `scene` when the request specifies
 exact geometry, coordinates, or JSON.
 
 - The skill calls the OpenAI-compatible image service configured by
   `imagegen_base_url` / `imagegen_model`, writes the returned PNG into
   `output_dir` (every successful generation is written before tracing),
-  then traces it with the draw_image pipeline.
-- **Disabled by default.** Requires the skill config
+  then traces it with the image pipeline.
+- Disabled by default. Requires the skill config
   `imagegen_enabled: true` plus a non-empty base URL and model. When disabled
   or misconfigured it returns `success=false` without a network request.
 - `trace` defaults to `lineart`; `skeleton` and `outline` can be requested
   explicitly.
 - Generated PNGs are tagged screen-upright (the same metadata
-  `plot_render_preview` writes), so the tool draws them upright by default.
+  `render_preview` writes), so the tool draws them upright by default.
   Pass `flip=true` to draw the raw raster direction (vertically mirrored).
 - `dry_run=true` still generates the PNG and plans waypoints but does not
   move the machine. `output_name` is sanitised to one `.png` file inside
   `output_dir`; `overwrite=true` replaces an existing file.
-- On failure, fall back to `plot_draw_scene` with a simple declarative scene
+- On failure, fall back to `scene` with a simple declarative scene
   authored from the request instead of retrying the same prompt.
 - The primitive HOME routine runs before the trajectory unless
   `skip_home=true`; `auto_home` homes after a successful draw.
 - This is a separate text-to-image service, not the robot's VLM. The VLM
   can understand images but cannot generate them.
 
-### `plot_render_preview`
+### `render_preview`
 
 Render the same declarative JSON scene to a black-on-white line-art PNG.
 
-- This is a **debug/preview** tool, enabled only when the skill config has
+- This is a debug/preview tool, enabled only when the skill config has
   `debug: true`. With `debug=false` it returns `success=false` and writes
-  nothing; plot with `plot_draw_scene` or `plot_draw_image` instead (or
-  `plot_draw_prompt` when image generation is enabled).
-- `debug` is a **skill config**, not a per-call argument. With `debug=true`
+  nothing; plot with `scene` or `image` instead (or
+  `prompt` when image generation is enabled).
+- `debug` is a skill config, not a per-call argument. With `debug=true`
   the PNG is written to `output_dir` and `image_path` points to it; the file
-  carries orientation/scale metadata that `plot_draw_image` understands.
+  carries orientation/scale metadata that `image` understands.
 - `output_name`, `overwrite`, `pixel_to_mm`, `line_width_mm`, and
   `supersample` tune the preview. An empty `output_name` selects the fixed
   slot `last_preview.png` and overwrites it; an explicit name keeps the
   normal overwrite rules.
-- `plot_draw_scene` writes the same `last_preview.png` before moving when
+- `scene` writes the same `last_preview.png` before moving when
   `debug=true`, so this tool is optional. Call it first when the preview
   should exist before planning the draw, then pass `skip_preview=true`.
-- Preview failures never block drawing; `plot_draw_scene` reports them as
+- Preview failures never block drawing; `scene` reports them as
   warnings and continues.
 
-### `plot_draw_image`
+### `image`
 
 Trace a PNG/JPEG/BMP/WebP file inside the allowed roots and draw it.
 
@@ -128,7 +128,7 @@ Trace a PNG/JPEG/BMP/WebP file inside the allowed roots and draw it.
 - The primitive HOME routine runs before the trajectory unless
   `skip_home=true`; `auto_home=true` runs it again after a successful draw.
 
-### `plot_list_images`
+### `list_images`
 
 List drawable files under `image_dir` / `output_dir` (direct children only,
 not recursive), optionally filtered by a filename substring. Use it instead of
@@ -137,7 +137,7 @@ guessing file paths.
 ## Motion parameters and homing
 
 Speed, acceleration, deceleration, jerk, and the primitive's pen-height
-profile are **not** skill config and are never sent by this skill. To change
+profile are not skill config and are never sent by this skill. To change
 them, call the primitive tools directly:
 
 - `plotter_set_params` — change the global profile (0 = keep current).

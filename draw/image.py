@@ -21,7 +21,7 @@ Both skeleton modes join neighbouring fragments whose endpoints are within
 ``bridge_px`` pixels before simplification, so small raster gaps become a
 short connecting stroke instead of a pen lift (dashed output).
 
-The geometry package (``xyz_draw/geometry/{image,trajectory}.py``) still
+The geometry package (``draw/geometry/{image,trajectory}.py``) still
 owns loading, thresholding, paper fitting and the outline geometry.
 ``trace.py`` owns the skeleton/line-art algorithms.
 

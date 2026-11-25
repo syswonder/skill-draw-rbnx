@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
-"""PNG metadata contract shared by render_preview and draw_image.
+"""PNG metadata contract shared by render_preview and image.
 
-Generated PNGs (render_preview and draw_prompt) are screen-upright: row 0 is
-the top of the image. These text chunks let ``draw_image`` restore the paper
+Generated PNGs (render_preview and prompt) are screen-upright: row 0 is
+the top of the image. These text chunks let ``image`` restore the paper
 coordinate system and the 1:1 millimetre scale without guessing. Third-party
-PNGs without these keys keep the normal ``draw_image`` defaults.
+PNGs without these keys keep the normal ``image`` defaults.
 
 Pillow stores PNG ``tEXt`` chunks in ``Image.info`` as strings; the writers
-in :mod:`xyz_draw.generate` and :mod:`xyz_draw.imagegen` use the same keys.
+in :mod:`draw.generate` and :mod:`draw.imagegen` use the same keys.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def read_png_hints(path: str) -> ImageHints:
     """Read the Robonix orientation/scale metadata, if present.
 
     Missing Pillow, unreadable files, and absent keys all return defaults;
-    the caller then behaves exactly like the pre-metadata ``draw_image``.
+    the caller then behaves exactly like the pre-metadata ``image``.
     """
     try:
         from PIL import Image

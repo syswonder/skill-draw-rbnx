@@ -2,7 +2,7 @@
 #
 # This tool calls an OpenAI-compatible ``/images/generations`` endpoint,
 # writes the returned PNG into output_dir, and then feeds that PNG through
-# the same tracing pipeline as draw_image. It is disabled unless the skill
+# the same tracing pipeline as image. It is disabled unless the skill
 # config has imagegen_enabled=true and imagegen_base_url/imagegen_model are
 # set; disabled or misconfigured calls return success=false without making
 # any network request.
@@ -15,7 +15,7 @@
 # waypoints, but does not move the machine. Every successful generation
 # writes the PNG into output_dir before any tracing happens.
 #
-# When this tool fails, fall back to draw_scene with a simple declarative
+# When this tool fails, fall back to scene with a simple declarative
 # scene instead of retrying the same prompt.
 #
 # The prompt is sent verbatim plus imagegen_prompt_suffix when configured.
@@ -32,7 +32,7 @@ string  trace
 string  size
 # Draw the generated image vertically mirrored (raw paper-raster direction).
 # Default false draws it screen-upright; the written PNG is also tagged with
-# robonix_orientation=screen so a later draw_image call stays upright.
+# robonix_orientation=screen so a later image call stays upright.
 bool    flip
 # Generate and plan only; do not move the machine.
 bool    dry_run
